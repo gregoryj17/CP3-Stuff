@@ -100,6 +100,24 @@ public class program {
         } catch (Exception e) {}
     }
 
+    public static void saveMaze(String filename) {
+        BufferedImage img;
+        if(solved)img = new BufferedImage(mw, mh, BufferedImage.TYPE_INT_RGB);
+        else img=new BufferedImage(mw,mh,BufferedImage.TYPE_BYTE_BINARY);
+        for (int i = 0; i < mh; i++) {
+            for (int j = 0; j < mw; j++) {
+                short v = maze[i][j];
+                if(v==DEAD_END)img.setRGB(j, i, (new Color(255, 0, 0)).getRGB());
+                else if(v==VISITED)img.setRGB(j, i, (new Color(0, 0, 255)).getRGB());
+                else if(v==PATH)img.setRGB(j, i, (new Color(255,255,255)).getRGB());
+                else img.setRGB(j, i, (new Color(v, v, v)).getRGB());
+            }
+        }
+        try {
+            ImageIO.write(img, "png", new File(filename));
+        } catch (Exception e) {}
+    }
+
     public static void saveStep(boolean solve, long step) {
         BufferedImage img = new BufferedImage(mw, mh, BufferedImage.TYPE_INT_RGB);
         for (int i = 0; i < mh; i++) {
@@ -129,9 +147,29 @@ public class program {
                 else img.setRGB(j, i, (new Color(v, v, v)).getRGB());
             }
         }
+        if(solved)img.setRGB(mw-1,mh-2,(new Color(0,0,255)).getRGB());
         try {
             String sname=name.substring(0,name.lastIndexOf('.'));
             ImageIO.write(img, "png", new File(sname + (solved?"solved":"") + ".png"));
+        } catch (Exception e) {}
+    }
+
+    public static void cmdSaveStep(boolean solve, long step){
+        BufferedImage img;
+        if(solve)img = new BufferedImage(mw, mh, BufferedImage.TYPE_INT_RGB);
+        else img=new BufferedImage(mw,mh,BufferedImage.TYPE_BYTE_BINARY);
+        for (int i = 0; i < mh; i++) {
+            for (int j = 0; j < mw; j++) {
+                short v = maze[i][j];
+                if(v==DEAD_END)img.setRGB(j, i, (new Color(255, 0, 0)).getRGB());
+                else if(v==VISITED)img.setRGB(j, i, (new Color(0, 0, 255)).getRGB());
+                else if(v==PATH)img.setRGB(j, i, (new Color(255,255,255)).getRGB());
+                else img.setRGB(j, i, (new Color(v, v, v)).getRGB());
+            }
+        }
+        try {
+            String sname=name.substring(0,name.lastIndexOf('.'));
+            ImageIO.write(img, "png", new File( (solve?"solve/":"gen/") + sname + "step" + step + ".png"));
         } catch (Exception e) {}
     }
 
@@ -249,6 +287,27 @@ public class program {
         saveStep(true,step);
     }
 
+    public static void cmdSolveSteps(){
+        int row=1;
+        int col=0;
+        int dir=getDir(row, col);
+        boolean dead=false;
+        long step=0;
+        while(!isFinished()){
+            dead=isDead(row, col);
+            mark(row, col, dead);
+            row+=dir==0?-1:dir==2?1:0;
+            col+=dir==3?-1:dir==1?1:0;
+            lastDir=(dir+2)%4;
+            dir=getDir(row,col);
+            cmdSaveStep(true,step);
+            step++;
+        }
+        solved=true;
+        cmdSaveStep(true,step);
+        saveMaze("solve/"+(name.substring(0,name.lastIndexOf('.')))+"step"+(step+1)+".png");
+    }
+
     public static boolean isDead(int row, int col){
         for(int i=0;i<4;i++) {
             int cr=row;
@@ -331,6 +390,12 @@ public class program {
         }catch(Exception e){}
     }
 
+    public static void cmdSaveDo(String filename){
+        try {
+            cmdSolveSteps();
+        }catch(Exception e){}
+    }
+
     public static void doStepMaze(int i){
         n=i;
         loadMaze("maze"+i+".png");
@@ -345,7 +410,7 @@ public class program {
             try{
                 choice=scan.nextLine().toLowerCase().charAt(0);
             }catch(Exception e){}
-        }while(choice!='g'&&choice!='s');
+        }while(choice!='g'&&choice!='s'&&choice!='o');
         action=choice;
     }
 
@@ -416,6 +481,20 @@ public class program {
             else if(action=='s'){
                 promptSolve();
                 cmdDo(name);
+            }
+            else if(action=='o'){
+                promptType();
+                if(action=='g'){
+                    promptGen();
+                    makeStepMaze();
+                }
+                else if(action=='s'){
+                    promptSolve();
+                    cmdSolveSteps();
+                }
+                else{
+                    System.out.println("You selected an invalid option. Please run the program again.");
+                }
             }
             else{
                 System.out.println("You selected an invalid option. Please run the program again.");

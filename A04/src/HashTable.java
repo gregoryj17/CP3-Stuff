@@ -1,7 +1,10 @@
-package PACKAGE_NAME;
-
-/**
- * Created by Jackson on 4/6/2017.
- */
+import java.util.*;
 public class HashTable {
+
+
+
+
+    public static void main(String[] args){
+
+    }
 }
