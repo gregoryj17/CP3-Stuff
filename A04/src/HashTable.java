@@ -1,3 +1,4 @@
+import java.io.*;
 import java.util.*;
 
 public class HashTable<K, V> {
@@ -64,7 +65,7 @@ public class HashTable<K, V> {
 
     public V get(K key) {
         int loc = find(key);
-        if (loc == -1) return null;
+        if (loc < 0) return null;
         else return values[loc];
     }
 
@@ -98,6 +99,14 @@ public class HashTable<K, V> {
         }
     }
 
+    public K[] getKeys() {
+        return (K[]) keys;
+    }
+
+    public V[] getValues() {
+        return (V[]) values;
+    }
+
     public double getLoadFactor() {
         return (load * 1.0) / size;
     }
@@ -115,18 +124,77 @@ public class HashTable<K, V> {
         return str;
     }
 
-    public static void main(String[] args) {
-        HashTable<String, Integer> hash = new HashTable<>("meme", 10);
-        System.out.println(hash);
-        System.out.println(hash.get("meme"));
-        hash.set("meme", (hash.get("meme") + 1));
-        System.out.println(hash.get("meme"));
-        hash.delete("meme");
-        System.out.println(hash.contains("meme"));
-        System.out.println(hash);
-        hash.add("meme", 1);
-        hash.add("nice", 3);
-        System.out.println(hash);
-        System.out.println(hash.getLoadFactor());
+    public static void main(String[] args) throws FileNotFoundException {
+        HashTable<String, Integer> hash = new HashTable<>(13000);
+        Scanner text = new Scanner(new File("book.txt"));
+        String book = "";
+        while (text.hasNextLine()) {
+            book += text.nextLine() + " ";
+        }
+        text.close();
+        System.out.println("HEKC");
+        String[] words = book.replaceAll("[^a-zA-Z ]", " ").toLowerCase().split("\\s+");
+        for (String word : words) {
+            Integer n = hash.get(word);
+            if (n == null) {
+                hash.add(word, 1);
+            } else {
+                hash.set(word, (n + 1));
+            }
+        }
+        hash.delete("t");
+        hash.delete("s");
+        Object[] keys = hash.getKeys();
+        Object[] values = hash.getValues();
+        for (int i = 0; i < keys.length; i++) {
+            int maxIndex = i;
+            for (int j = i; j < keys.length; j++) {
+                if (values[maxIndex] == null) maxIndex = j;
+                if (values[j] != null && (Integer) (values[j]) > (Integer) (values[maxIndex])) maxIndex = j;
+            }
+            Object stemp = keys[i];
+            keys[i] = keys[maxIndex];
+            keys[maxIndex] = stemp;
+            Object itemp = values[i];
+            values[i] = values[maxIndex];
+            values[maxIndex] = itemp;
+
+        }
+        PrintWriter out = new PrintWriter("output.csv");
+        out.println("Word,Count");
+        for (int i = 0; i < keys.length; i++) {
+            if (keys[i] == null || values[i] == null) break;
+            System.out.println((String) (keys[i]) + ", " + (Integer) (values[i]));
+            out.println((String) (keys[i]) + ", " + (Integer) (values[i]));
+        }
+        out.close();
+        PrintWriter output = new PrintWriter("top100.csv");
+        output.println("Word,Count");
+        for (int i = 0; i < 100; i++) {
+            if (keys[i] == null || values[i] == null) break;
+            output.println((String) (keys[i]) + ", " + (Integer) (values[i]));
+        }
+        output.close();
+        HashMap<String, Integer> javahash = new HashMap<String, Integer>();
+        for (String word : words) {
+            Integer n = javahash.get(word);
+            if (n == null) {
+                javahash.put(word, 1);
+            } else {
+                javahash.put(word, n + 1);
+            }
+        }
+        javahash.remove("t");
+        javahash.remove("s");
+        javahash.remove("");
+        PrintWriter javaout = new PrintWriter("javaoutput.csv");
+        String heck = "Word,Count\n";
+        System.out.println(javahash.size());
+        for (Map.Entry<String, Integer> entry : javahash.entrySet()) {
+            heck += (entry.getKey() + ", " + entry.getValue().toString()) + "\n";
+        }
+        System.out.println(heck);
+        javaout.println(heck);
+        javaout.close();
     }
 }
