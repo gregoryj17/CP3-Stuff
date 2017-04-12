@@ -132,7 +132,7 @@ public class HashTable<K, V> {
             book += text.nextLine() + " ";
         }
         text.close();
-        System.out.println("HEKC");
+        System.out.println("Import complete.");
         String[] words = book.replaceAll("[^a-zA-Z ]", " ").toLowerCase().split("\\s+");
         for (String word : words) {
             Integer n = hash.get(word);
