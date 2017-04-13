@@ -7,6 +7,7 @@ public class HashTable<K, V> {
     public V[] values;
     public int load = 0;
     public int size;
+    public int collisions=0;
 
     public HashTable() {
         size = 2;
@@ -39,6 +40,7 @@ public class HashTable<K, V> {
         int hash = Math.abs(key.hashCode()) % size;
         while (keys[hash] != null && values[hash] != null) {
             hash = (hash + 1) % size;
+            collisions++;
         }
         keys[hash] = key;
         values[hash] = value;
@@ -53,6 +55,7 @@ public class HashTable<K, V> {
         keys = (K[]) (new Object[size]);
         values = (V[]) (new Object[size]);
         load = 0;
+        collisions=0;
         for (int i = 0; i < oKeys.length; i++) {
             if (oKeys[i] != null && oVals[i] != null) add(oKeys[i], oVals[i]);
         }
@@ -115,6 +118,10 @@ public class HashTable<K, V> {
         return size;
     }
 
+    public int getCollisions(){
+        return collisions;
+    }
+
     public String toString() {
         String str = "";
         str += load + ((load != 1) ? " elements\n" : " element\n");
@@ -125,7 +132,7 @@ public class HashTable<K, V> {
     }
 
     public static void main(String[] args) throws FileNotFoundException {
-        HashTable<String, Integer> hash = new HashTable<>(13000);
+        HashTable<String, Integer> hash = new HashTable<>();
         Scanner text = new Scanner(new File("book.txt"));
         String book = "";
         while (text.hasNextLine()) {
@@ -134,14 +141,23 @@ public class HashTable<K, V> {
         text.close();
         System.out.println("Import complete.");
         String[] words = book.replaceAll("[^a-zA-Z ]", " ").toLowerCase().split("\\s+");
+        /*int num=0;
+        PrintWriter statsout = new PrintWriter("stats.csv");
+        statsout.println("Elements,Size,Load,Collisions");*/
         for (String word : words) {
+            /*if(num%100==0){
+                statsout.println(num+","+hash.getSize()+","+hash.getLoadFactor()+","+hash.getCollisions());
+                System.out.println(num);
+            }*/
             Integer n = hash.get(word);
             if (n == null) {
                 hash.add(word, 1);
             } else {
                 hash.set(word, (n + 1));
             }
+            //num++;
         }
+        //statsout.close();
         hash.delete("t");
         hash.delete("s");
         Object[] keys = hash.getKeys();
@@ -165,16 +181,17 @@ public class HashTable<K, V> {
         for (int i = 0; i < keys.length; i++) {
             if (keys[i] == null || values[i] == null) break;
             System.out.println((String) (keys[i]) + ", " + (Integer) (values[i]));
-            out.println((String) (keys[i]) + ", " + (Integer) (values[i]));
+            out.println((String) (keys[i]) + "," + (Integer) (values[i]));
         }
         out.close();
         PrintWriter output = new PrintWriter("top100.csv");
         output.println("Word,Count");
         for (int i = 0; i < 100; i++) {
             if (keys[i] == null || values[i] == null) break;
-            output.println((String) (keys[i]) + ", " + (Integer) (values[i]));
+            output.println((String) (keys[i]) + "," + (Integer) (values[i]));
         }
         output.close();
+        /*
         HashMap<String, Integer> javahash = new HashMap<String, Integer>();
         for (String word : words) {
             Integer n = javahash.get(word);
@@ -195,6 +212,6 @@ public class HashTable<K, V> {
         }
         System.out.println(heck);
         javaout.println(heck);
-        javaout.close();
+        javaout.close();*/
     }
 }
