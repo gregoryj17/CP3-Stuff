@@ -7,7 +7,7 @@ public class HashTable<K, V> {
     public V[] values;
     public int load = 0;
     public int size;
-    public int collisions=0;
+    public int collisions = 0;
 
     public HashTable() {
         size = 2;
@@ -55,7 +55,7 @@ public class HashTable<K, V> {
         keys = (K[]) (new Object[size]);
         values = (V[]) (new Object[size]);
         load = 0;
-        collisions=0;
+        collisions = 0;
         for (int i = 0; i < oKeys.length; i++) {
             if (oKeys[i] != null && oVals[i] != null) add(oKeys[i], oVals[i]);
         }
@@ -118,7 +118,7 @@ public class HashTable<K, V> {
         return size;
     }
 
-    public int getCollisions(){
+    public int getCollisions() {
         return collisions;
     }
 
@@ -141,23 +141,35 @@ public class HashTable<K, V> {
         text.close();
         System.out.println("Import complete.");
         String[] words = book.replaceAll("[^a-zA-Z ]", " ").toLowerCase().split("\\s+");
-        /*int num=0;
-        PrintWriter statsout = new PrintWriter("stats.csv");
-        statsout.println("Elements,Size,Load,Collisions");*/
         for (String word : words) {
-            /*if(num%100==0){
-                statsout.println(num+","+hash.getSize()+","+hash.getLoadFactor()+","+hash.getCollisions());
-                System.out.println(num);
-            }*/
             Integer n = hash.get(word);
             if (n == null) {
                 hash.add(word, 1);
             } else {
                 hash.set(word, (n + 1));
             }
-            //num++;
         }
-        //statsout.close();
+        /*long start, end;
+        PrintWriter timeout=new PrintWriter("times.csv");
+        timeout.println("Words,Time (s)");
+        for (int i = 0; i < 340; i++) {
+            hash=new HashTable<String, Integer>();
+            start=System.nanoTime();
+            for (int j = 0; j < i * 1000 && j < words.length; j++) {
+                String word = words[j];
+                Integer n = hash.get(word);
+                if (n == null) {
+                    hash.add(word, 1);
+                } else {
+                    hash.set(word, n + 1);
+                }
+            }
+            end=System.nanoTime();
+            String outt=((i*1000>words.length)?words.length:i*1000)+","+((end-start)*Math.pow(10,-9));
+            System.out.println(outt);
+            timeout.println(outt);
+        }
+        timeout.close();*/
         hash.delete("t");
         hash.delete("s");
         Object[] keys = hash.getKeys();
