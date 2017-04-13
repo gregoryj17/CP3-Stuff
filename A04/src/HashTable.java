@@ -149,19 +149,20 @@ public class HashTable<K, V> {
                 hash.set(word, (n + 1));
             }
         }
+
         /*long start, end;
-        PrintWriter timeout=new PrintWriter("times.csv");
+        PrintWriter timeout=new PrintWriter("javatimes.csv");
         timeout.println("Words,Time (s)");
         for (int i = 0; i < 340; i++) {
-            hash=new HashTable<String, Integer>();
+            HashMap<String, Integer>javahash=new HashMap<String, Integer>();
             start=System.nanoTime();
             for (int j = 0; j < i * 1000 && j < words.length; j++) {
                 String word = words[j];
-                Integer n = hash.get(word);
+                Integer n = javahash.get(word);
                 if (n == null) {
-                    hash.add(word, 1);
+                    javahash.put(word, 1);
                 } else {
-                    hash.set(word, n + 1);
+                    javahash.put(word, n + 1);
                 }
             }
             end=System.nanoTime();
@@ -170,6 +171,7 @@ public class HashTable<K, V> {
             timeout.println(outt);
         }
         timeout.close();*/
+
         hash.delete("t");
         hash.delete("s");
         Object[] keys = hash.getKeys();
