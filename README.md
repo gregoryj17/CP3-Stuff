@@ -13,3 +13,5 @@ A02 - Pathfinding
 A03 - Self-Balancing Binary Search Tree
 
 A04 - Hash Table
+
+A05 - Socketing
