@@ -116,11 +116,20 @@ public class RPSClient {
     }
 
     public static void main(String[] args) throws Exception {
-        String serverAddress = (args.length == 0) ? "localhost" : args[0];
-        RPSClient client = new RPSClient(serverAddress);
-        System.out.println("Waiting for an opponent...");
-        String response = client.in.readLine();
-        System.out.println("Opponent found!\n");
-        client.play();
+        try {
+            String serverAddress = (args.length == 0) ? "172.16.2.13" : args[0];
+            RPSClient client = new RPSClient(serverAddress);
+            System.out.println("Waiting for an opponent...");
+            String response = client.in.readLine();
+            System.out.println("Opponent found!\n");
+            client.play();
+        }catch(Exception e){
+            String serverAddress = (args.length == 0) ? "localhost" : args[0];
+            RPSClient client = new RPSClient(serverAddress);
+            System.out.println("Waiting for an opponent...");
+            String response = client.in.readLine();
+            System.out.println("Opponent found!\n");
+            client.play();
+        }
     }
 }

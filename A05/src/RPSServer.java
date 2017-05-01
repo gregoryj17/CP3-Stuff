@@ -15,13 +15,13 @@ public class RPSServer {
         try {
             while (true) {
                 Player player1 = new Player(listener.accept());
-                System.out.println("Player 1 connected!");
+                //System.out.println("Player 1 connected!");
                 Player player2 = new Player(listener.accept());
-                System.out.println("Player 2 connected!");
+                //System.out.println("Player 2 connected!");
                 Game game = new Game(player1, player2);
-                System.out.println("A game is starting!");
+                //System.out.println("A game is starting!");
                 game.start();
-                System.out.println("A game has ended.");
+                //System.out.println("A game has ended.");
             }
         } finally {
             listener.close();
@@ -30,7 +30,7 @@ public class RPSServer {
 }
 
 
-class Game {
+class Game extends Thread {
     public Player player1, player2;
     int p1m, p2m;
 
@@ -41,7 +41,7 @@ class Game {
         sendp2("READY!");
     }
 
-    public void start() {
+    public void run() {
         while (true) {
             try {
                 player1.makeThrow();
