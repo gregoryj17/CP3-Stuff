@@ -19,6 +19,7 @@ public class FactorServer extends Thread {
     LinkedList<String> queue = new LinkedList<>();
     public PrintWriter resultWriter;
     public PrintWriter timeLogger;
+    public PrintWriter timelog;
     public ServerSocket listener;
 
     public FactorServer() throws Exception {
@@ -26,6 +27,7 @@ public class FactorServer extends Thread {
         numIn = new Scanner(new File("numbers.txt"));
         resultWriter = new PrintWriter("output.txt");
         timeLogger = new PrintWriter("timelog.txt");
+        timelog = new PrintWriter("loglongtime.txt");
         listener = new ServerSocket(port);
         System.out.println("Factor Server is Running");
         log("Server started.");
@@ -125,6 +127,7 @@ public class FactorServer extends Thread {
             if (!clients.get(nextClient).dead) {
                 clients.get(nextClient).send(job);
                 log("Sent \"" + job + "\" to client " + nextClient);
+                timeLog(job);
                 nextClient = (nextClient + 1) % clients.size();
                 break;
             } else {
@@ -137,6 +140,11 @@ public class FactorServer extends Thread {
         Date d = new Date();
         logger.append(d + " " + toLog + "\r\n");
         logger.flush();
+    }
+
+    public void timeLog(String toLog){
+        timelog.append(System.nanoTime()+" "+toLog+"\r\n");
+        timelog.flush();
     }
 
     public void printResult(String result) {
@@ -195,6 +203,7 @@ class Client extends Thread {
             try {
                 String in = input.readLine();
                 parent.log("Received \"" + in + "\" from client " + ID);
+                parent.timeLog(in);
                 //if (in != null) System.out.println(in);
                 if (in.equals("QUIT")) {
                     dead = true;
