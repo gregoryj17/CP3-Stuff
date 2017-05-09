@@ -1,3 +1,5 @@
+import com.sun.security.ntlm.Server;
+
 import java.io.*;
 import java.math.BigInteger;
 import java.net.ServerSocket;
@@ -18,12 +20,15 @@ public class FactorServer extends Thread {
     public BigInteger result = new BigInteger("-1");
     LinkedList<String> queue = new LinkedList<>();
     public PrintWriter resultWriter;
+    public PrintWriter timeLogger;
+    public ServerSocket listener;
 
     public FactorServer() throws Exception {
         logger = new PrintWriter("log.txt");
         numIn = new Scanner(new File("numbers.txt"));
         resultWriter = new PrintWriter("output.txt");
-        ServerSocket listener = new ServerSocket(port);
+        timeLogger = new PrintWriter("timelog.txt");
+        listener = new ServerSocket(port);
         System.out.println("Factor Server is Running");
         log("Server started.");
         Scanner scan = new Scanner(System.in);
@@ -102,6 +107,22 @@ public class FactorServer extends Thread {
     public void sendNext(String input) {
         while (true) {
             String job = "GIVE " + nextClient + " " + input;
+            if (clients.size() <= 0) {
+                System.out.println("No clients found!");
+            }
+            while (clients.size() <= 0) {
+                try {
+                    Client client = new Client(listener.accept(), this, clientID++);
+                    if (client != null) {
+                        clients.add(client);
+                        client.start();
+                        System.out.println("Client connected.");
+                        log("Client " + (clientID - 1) + " connected.");
+                    }
+                } catch (Exception e) {
+
+                }
+            }
             if (nextClient >= clients.size()) nextClient = 0;
             if (!clients.get(nextClient).dead) {
                 clients.get(nextClient).send(job);
@@ -123,6 +144,11 @@ public class FactorServer extends Thread {
     public void printResult(String result) {
         resultWriter.append(result + "\r\n");
         resultWriter.flush();
+    }
+
+    public void printTime(String toPrint) {
+        timeLogger.append(toPrint + "\r\n");
+        timeLogger.flush();
     }
 
     public void remove(Client client) {
@@ -162,6 +188,7 @@ class Client extends Thread {
     public void send(String toSend) {
         output.println(toSend);
         jobs.add(toSend.substring(7));
+        parent.printTime("START " + toSend.substring(7) + " " + System.nanoTime());
         factor = new BigInteger("-1");
     }
 
@@ -170,7 +197,7 @@ class Client extends Thread {
             try {
                 String in = input.readLine();
                 parent.log("Received \"" + in + "\" from client " + ID);
-                if (in != null) System.out.println(in);
+                //if (in != null) System.out.println(in);
                 if (in.equals("QUIT")) {
                     dead = true;
                     parent.clients.remove(this);
@@ -181,8 +208,10 @@ class Client extends Thread {
                         factor = new BigInteger(result[5]);
                         if (factor.pow(2).compareTo(new BigInteger(result[2])) <= 0) {
                             parent.printResult(result[2] + " " + factor + " " + (new BigInteger(result[2]).divide(factor)));
+                            System.out.println("Factored "+result[2]+". Found factor "+factor+".");
                         }
                     }
+                    parent.printTime(result[0] + " " + result[2] + " " + result[3] + " " + result[4] + " " + System.nanoTime());
                 }
             } catch (Exception e) {
                 dead = true;
@@ -192,4 +221,40 @@ class Client extends Thread {
             }
         }
     }
+}
+
+class Job extends Object {
+    BigInteger num;
+    BigInteger start;
+    BigInteger end;
+    long starttime;
+
+    public Job(BigInteger num, BigInteger start, BigInteger end, long starttime) {
+        this.num = num;
+        this.start = start;
+        this.end = end;
+        this.starttime = starttime;
+    }
+
+    public Job(String jobinfo, long starttime) {
+        this.starttime = starttime;
+        String[] ji = jobinfo.split(" ");
+        num = new BigInteger(ji[2]);
+        start = new BigInteger(ji[3]);
+        end = new BigInteger(ji[4]);
+    }
+
+    public boolean equals(Job j) {
+        if (j.num.compareTo(num) == 0 && j.start.compareTo(start) == 0 && j.end.compareTo(end) == 0) return true;
+        return false;
+    }
+
+    public long timeDiff(Job j) {
+        return j.starttime - starttime;
+    }
+
+    public String toString() {
+        return num + " " + start + " " + end;
+    }
+
 }

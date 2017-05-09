@@ -18,12 +18,13 @@ public class FactorClient {
     private BufferedReader in;
     private PrintWriter out;
     private ArrayList<Core> cores = new ArrayList<Core>();
+    public static int maxCores = 8;
 
     public FactorClient(String serverAddress) throws Exception {
         socket = new Socket(serverAddress, PORT);
         in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
         out = new PrintWriter(socket.getOutputStream(), true);
-        for (int i = 0; i < 8; i++) {
+        for (int i = 0; i < maxCores; i++) {
             Core core = new Core(in, out);
             cores.add(core);
         }
@@ -67,6 +68,12 @@ public class FactorClient {
             System.out.println("Please enter the server's IP address: ");
             String serverAddress = (new Scanner(System.in)).nextLine();
             FactorClient client = new FactorClient(serverAddress);
+            System.out.println("How many cores?: ");
+            try {
+                maxCores = (new Scanner(System.in).nextInt());
+            } catch (Exception e) {
+                maxCores = 8;
+            }
             client.factor();
         } catch (Exception e) {
             e.printStackTrace();
@@ -88,15 +95,15 @@ class Core extends Thread {
     public void factor(String input) {
         try {
             inUse = true;
-            System.out.println(input);
+            System.out.println("RECEIVED "+input);
             String[] args = input.split(" ");
-            System.out.println(Arrays.toString(args));
+            //System.out.println(Arrays.toString(args));
             int id = Integer.parseInt(args[1]);
             BigInteger num = new BigInteger(args[2]);
             BigInteger start = new BigInteger(args[3]);
             BigInteger end = new BigInteger(args[4]);
             BigInteger result = check(num, start, end);
-            System.out.println(result);
+            System.out.println("FOUND "+result);
             out.println("FINISH " + input.substring(5) + " " + result);
         } catch (Exception e) {
             out.println("FAILED " + input.substring(5));
