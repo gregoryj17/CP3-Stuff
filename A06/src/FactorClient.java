@@ -30,17 +30,29 @@ public class FactorClient {
     }
 
     public void factor() throws Exception {
-        String response;
         try {
             Scanner scan = new Scanner(System.in);
             while (true) {
-                while(cores.contains(null)){
-                    cores.remove(null);
+                for (int i = 0; i < cores.size(); i++) {
+                    if (cores.get(i).getState() == Thread.State.TERMINATED) {
+                        cores.remove(cores.get(i));
+                        i--;
+                    }
                 }
                 int size = cores.size();
-                out.println(size);
-                for (int i = 0; i < size; i++) {
-                    cores.get(i).factor(in.readLine());
+                //out.println("CORES "+size);
+                String input = in.readLine();
+                if (input.startsWith("GIVE")) {
+                    for (int i = 0; i < size; i++) {
+                        if (!cores.get(i).inUse) {
+                            cores.get(i).factor(input);
+                            break;
+                        }
+                    }
+                } else if (input.equals("QUIT")) {
+                    out.println("QUIT");
+                    System.out.println("Quitting.");
+                    break;
                 }
 
             }
@@ -66,6 +78,7 @@ class Core extends Thread {
 
     BufferedReader in;
     PrintWriter out;
+    public boolean inUse;
 
     public Core(BufferedReader in, PrintWriter out) {
         this.in = in;
@@ -73,24 +86,32 @@ class Core extends Thread {
     }
 
     public void factor(String input) {
-        System.out.println(input);
-        String[] args = input.split(" ");
-        System.out.println(Arrays.toString(args));
-        int id = Integer.parseInt(args[0]);
-        BigInteger num = new BigInteger(args[1]);
-        BigInteger start = new BigInteger(args[2]);
-        BigInteger end = new BigInteger(args[3]);
-        BigInteger result = check(num, start, end);
-        System.out.println(result);
-        out.println(input+" "+result);
-        out.flush();
+        try {
+            inUse = true;
+            System.out.println(input);
+            String[] args = input.split(" ");
+            System.out.println(Arrays.toString(args));
+            int id = Integer.parseInt(args[1]);
+            BigInteger num = new BigInteger(args[2]);
+            BigInteger start = new BigInteger(args[3]);
+            BigInteger end = new BigInteger(args[4]);
+            BigInteger result = check(num, start, end);
+            System.out.println(result);
+            out.println("FINISH " + input.substring(5) + " " + result);
+        } catch (Exception e) {
+            out.println("FAILED " + input.substring(5));
+        } finally {
+            inUse = false;
+        }
     }
 
     public BigInteger check(BigInteger num, BigInteger start, BigInteger end) {
-        if (num.mod(new BigInteger("2")).compareTo(new BigInteger("0")) == 0) return new BigInteger("2");
-        if (start.mod(new BigInteger("2")).compareTo(new BigInteger("0")) == 0) start.add(new BigInteger("1"));
-        for (BigInteger i = new BigInteger(start + ""); i.compareTo(end) <= 0; i=i.add(new BigInteger("1"))) {
-            if (num.mod(i).compareTo(new BigInteger("0")) == 0) return i;
+        if (start.compareTo(BigInteger.ZERO) == 0) start = start.add(BigInteger.ONE);
+        if (start.compareTo(BigInteger.ONE) == 0) start = start.add(BigInteger.ONE);
+        if (num.mod(new BigInteger("2")).compareTo(BigInteger.ZERO) == 0) return new BigInteger("2");
+        if (start.mod(new BigInteger("2")).compareTo(BigInteger.ZERO) == 0) start = start.add(BigInteger.ONE);
+        for (BigInteger i = new BigInteger(start + ""); i.compareTo(end) <= 0; i = i.add(new BigInteger("2"))) {
+            if (num.mod(i).compareTo(BigInteger.ZERO) == 0) return i;
         }
         return new BigInteger("-1");
     }
