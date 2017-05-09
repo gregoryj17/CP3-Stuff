@@ -67,13 +67,13 @@ public class FactorClient {
         try {
             System.out.println("Please enter the server's IP address: ");
             String serverAddress = (new Scanner(System.in)).nextLine();
-            FactorClient client = new FactorClient(serverAddress);
             System.out.println("How many cores?: ");
             try {
                 maxCores = (new Scanner(System.in).nextInt());
             } catch (Exception e) {
                 maxCores = 8;
             }
+            FactorClient client = new FactorClient(serverAddress);
             client.factor();
         } catch (Exception e) {
             e.printStackTrace();
