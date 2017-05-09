@@ -17,7 +17,7 @@ public class FactorServer extends Thread {
     public static Scanner numIn;
     public BigInteger result = new BigInteger("-1");
     LinkedList<String> queue = new LinkedList<>();
-    public static PrintWriter resultWriter;
+    public PrintWriter resultWriter;
 
     public FactorServer() throws Exception {
         logger = new PrintWriter("log.txt");
@@ -61,10 +61,11 @@ public class FactorServer extends Thread {
                         }
                     }
                 }
+                /*
                 if (result.compareTo(new BigInteger("-1")) != 0) {
                     resultWriter.println(num + " " + result + " " + num.divide(result));
                     resultWriter.flush();
-                }
+                }*/
                 for (int i = 0; i < clients.size(); i++) {
                     if (clients.get(i).dead) {
                         clients.remove(i);
@@ -99,23 +100,29 @@ public class FactorServer extends Thread {
     }
 
     public void sendNext(String input) {
-        for (int i = 0; i < clients.size(); i++) {
+        while (true) {
             String job = "GIVE " + nextClient + " " + input;
+            if (nextClient >= clients.size()) nextClient = 0;
             if (!clients.get(nextClient).dead) {
                 clients.get(nextClient).send(job);
                 log("Sent \"" + job + "\" to client " + nextClient);
                 nextClient = (nextClient + 1) % clients.size();
                 break;
-            }else{
-                nextClient=(nextClient+1)%clients.size();
+            } else {
+                nextClient = (nextClient + 1) % clients.size();
             }
         }
     }
 
     public void log(String toLog) {
         Date d = new Date();
-        logger.append(d + " " + toLog + "\n");
+        logger.append(d + " " + toLog + "\r\n");
         logger.flush();
+    }
+
+    public void printResult(String result) {
+        resultWriter.append(result + "\r\n");
+        resultWriter.flush();
     }
 
     public void remove(Client client) {
@@ -154,7 +161,7 @@ class Client extends Thread {
 
     public void send(String toSend) {
         output.println(toSend);
-        jobs.add(toSend);
+        jobs.add(toSend.substring(7));
         factor = new BigInteger("-1");
     }
 
@@ -169,8 +176,12 @@ class Client extends Thread {
                     parent.clients.remove(this);
                 } else if (in.startsWith("FINISH")) {
                     String[] result = in.split(" ");
+                    jobs.remove(result[2] + " " + result[3] + " " + result[4]);
                     if (!result[5].equals("-1")) {
                         factor = new BigInteger(result[5]);
+                        if (factor.pow(2).compareTo(new BigInteger(result[2])) <= 0) {
+                            parent.printResult(result[2] + " " + factor + " " + (new BigInteger(result[2]).divide(factor)));
+                        }
                     }
                 }
             } catch (Exception e) {
