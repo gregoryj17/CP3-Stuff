@@ -21,73 +21,69 @@ public class FactorServer extends Thread {
     public PrintWriter timeLogger;
     public PrintWriter timelog;
     public ServerSocket listener;
+    public PrintWriter csvlog;
 
     public FactorServer() throws Exception {
         logger = new PrintWriter("log.txt");
-        numIn = new Scanner(new File("numbers.txt"));
+        numIn = new Scanner(new File("jackson.txt"));
         resultWriter = new PrintWriter("output.txt");
         timeLogger = new PrintWriter("timelog.txt");
         timelog = new PrintWriter("loglongtime.txt");
+        csvlog = new PrintWriter("timelog.csv");
         listener = new ServerSocket(port);
         System.out.println("Factor Server is Running");
         log("Server started.");
         Scanner scan = new Scanner(System.in);
         try {
-            while (numIn.hasNext()) {
-                while (clients.size() < maxClients) {
-                    Client client = new Client(listener.accept(), this, clientID++);
-                    if (client != null) {
-                        clients.add(client);
-                        client.start();
-                        System.out.println("Client connected.");
-                        log("Client " + (clientID - 1) + " connected.");
-                    }
+            while (clients.size() < maxClients) {
+                Client client = new Client(listener.accept(), this, clientID++);
+                if (client != null) {
+                    clients.add(client);
+                    client.start();
+                    System.out.println("Client connected.");
+                    log("Client " + (clientID - 1) + " connected.");
                 }
+            }
+            while (numIn.hasNext()) {
                 String nextline = numIn.nextLine();
+                BigInteger num;
                 if (nextline.equals("")) break;
-                //System.out.println(nextline);
-                BigInteger num = new BigInteger(nextline);
+                else {
+                    num = new BigInteger(nextline.split(" ")[1]);
+                }
+                System.out.println(nextline);
                 queue = new LinkedList<>();
                 BigInteger len = new BigInteger("30000000");
                 BigInteger current = new BigInteger("0");
                 result = new BigInteger("-1");
-                while (current.pow(2).compareTo(num) < 1) {
-                    BigInteger next = current.add(len);
-                    queue.add(num + " " + current + " " + next);
-                    current = next;
-                }
-                while (!queue.isEmpty() || result.compareTo(new BigInteger("-1")) == 0) {
-                    if (!queue.isEmpty()) {
-                        sendNext(queue.pollFirst());
+                boolean finished = false;
+                while (!finished) {
+                    while (queue.size() < clients.size() * 8 && current.pow(2).compareTo(num) < 1) {
+                        BigInteger next = current.add(len);
+                        queue.add(num + " " + current + " " + next);
+                        current = next;
                     }
-                    for (int i = 0; i < clients.size(); i++) {
-                        if (clients.get(i).factor.compareTo(new BigInteger("-1")) != 0) {
-                            result = clients.get(i).factor;
+                    while (!queue.isEmpty() && result.compareTo(new BigInteger("-1")) == 0) {
+                        if (!queue.isEmpty()) {
+                            sendNext(queue.pollFirst());
+                        }
+                        for (int i = 0; i < clients.size(); i++) {
+                            if (clients.get(i).factor.compareTo(new BigInteger("-1")) != 0) {
+                                result = clients.get(i).factor;
+                                finished = true;
+                            }
                         }
                     }
+                    if (result.compareTo(new BigInteger("-1")) != 0) {
+                        finished = true;
+                    }
                 }
-                /*
-                if (result.compareTo(new BigInteger("-1")) != 0) {
-                    resultWriter.println(num + " " + result + " " + num.divide(result));
-                    resultWriter.flush();
-                }*/
                 for (int i = 0; i < clients.size(); i++) {
                     if (clients.get(i).dead) {
                         clients.remove(i);
                         i--;
                     }
                 }
-                /*if (scan.hasNext()) {
-                    String cmdargs = scan.nextLine();
-                    if (cmdargs.equals("CLIENTS")) {
-                        for (int i = 0; i < clients.size(); i++) {
-                            System.out.println(clients.get(i));
-                        }
-                    } else {
-                        sendNext(cmdargs);
-                        //clients.get(0).output.println(cmdargs);
-                    }
-                }*/
             }
         } finally {
             listener.close();
@@ -142,14 +138,18 @@ public class FactorServer extends Thread {
         logger.flush();
     }
 
-    public void timeLog(String toLog){
-        timelog.append(System.nanoTime()+" "+toLog+"\r\n");
+    public void timeLog(String toLog) {
+        timelog.append(System.nanoTime() + " " + toLog + "\r\n");
         timelog.flush();
+        String commalog = toLog.replaceAll(" ", ", ");
+        csvlog.append(System.nanoTime() + ", " + commalog + "\r\n");
+        csvlog.flush();
     }
 
     public void printResult(String result) {
         resultWriter.append(result + "\r\n");
         resultWriter.flush();
+        this.result = new BigInteger(result.split(" ")[1]);
     }
 
     public void printTime(String toPrint) {
@@ -215,7 +215,7 @@ class Client extends Thread {
                         factor = new BigInteger(result[5]);
                         if (factor.pow(2).compareTo(new BigInteger(result[2])) <= 0) {
                             parent.printResult(result[2] + " " + factor + " " + (new BigInteger(result[2]).divide(factor)));
-                            System.out.println("Factored "+result[2]+". Found factor "+factor+".");
+                            System.out.println("Factored " + result[2] + ". Found factor " + factor + ".");
                         }
                     }
                     parent.printTime(result[0] + " " + result[2] + " " + result[3] + " " + result[4] + " " + System.nanoTime());
