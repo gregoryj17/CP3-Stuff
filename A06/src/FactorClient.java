@@ -32,7 +32,7 @@ public class FactorClient {
 
     public void factor() throws Exception {
         try {
-            Scanner scan = new Scanner(System.in);
+            //Scanner scan = new Scanner(System.in);
             while (true) {
                 for (int i = 0; i < cores.size(); i++) {
                     if (cores.get(i).getState() == Thread.State.TERMINATED) {
@@ -86,16 +86,24 @@ class Core extends Thread {
     BufferedReader in;
     PrintWriter out;
     public boolean inUse;
+    PrintWriter timelog,csvlog;
 
     public Core(BufferedReader in, PrintWriter out) {
         this.in = in;
         this.out = out;
+        try{
+            timelog = new PrintWriter("clientlog.txt");
+            csvlog = new PrintWriter("clienttimelog.csv");
+        }catch(Exception e) {
+
+        }
     }
 
     public void factor(String input) {
         try {
             inUse = true;
             System.out.println("RECEIVED "+input);
+            timeLog(input);
             String[] args = input.split(" ");
             //System.out.println(Arrays.toString(args));
             int id = Integer.parseInt(args[1]);
@@ -105,11 +113,26 @@ class Core extends Thread {
             BigInteger result = check(num, start, end);
             System.out.println("FOUND "+result);
             out.println("FINISH " + input.substring(5) + " " + result);
+            timeLog("FINISH " + input.substring(5) + " " + result);
         } catch (Exception e) {
             out.println("FAILED " + input.substring(5));
+            timeLog("FAILED " + input.substring(5));
         } finally {
             inUse = false;
         }
+    }
+
+    public void timeLog(String toLog){
+        try{
+            timelog.append(System.nanoTime() + " " + toLog + "\r\n");
+            timelog.flush();
+            String commalog = toLog.replaceAll(" ", ", ");
+            csvlog.append(System.nanoTime() + ", " + commalog + "\r\n");
+            csvlog.flush();
+        }catch(Exception e){
+
+        }
+
     }
 
     public BigInteger check(BigInteger num, BigInteger start, BigInteger end) {

@@ -22,6 +22,9 @@ public class FactorServer extends Thread {
     public PrintWriter timelog;
     public ServerSocket listener;
     public PrintWriter csvlog;
+    public long endtime;
+    public long begintime;
+    public static long lifetime;
 
     public FactorServer() throws Exception {
         logger = new PrintWriter("log.txt");
@@ -44,33 +47,40 @@ public class FactorServer extends Thread {
                     log("Client " + (clientID - 1) + " connected.");
                 }
             }
-            while (numIn.hasNext()) {
+            begintime = System.nanoTime();
+            endtime = (lifetime != -1) ? (begintime + lifetime) : -1;
+            while (numIn.hasNext() && (endtime == -1 || System.nanoTime() < endtime)) {
                 String nextline = numIn.nextLine();
                 BigInteger num;
                 if (nextline.equals("")) break;
                 else {
                     num = new BigInteger(nextline.split(" ")[1]);
                 }
-                System.out.println(nextline);
+                //System.out.println(nextline);
                 queue = new LinkedList<>();
                 BigInteger len = new BigInteger("30000000");
                 BigInteger current = new BigInteger("0");
                 result = new BigInteger("-1");
                 boolean finished = false;
-                while (!finished) {
+                while (!finished && (endtime == -1 || System.nanoTime() < endtime)) {
                     while (queue.size() < clients.size() * 8 && current.pow(2).compareTo(num) < 1) {
                         BigInteger next = current.add(len);
                         queue.add(num + " " + current + " " + next);
                         current = next;
                     }
-                    while (!queue.isEmpty() && result.compareTo(new BigInteger("-1")) == 0) {
+                    while (result.compareTo(new BigInteger("-1")) == 0 && (endtime == -1 || System.nanoTime() < endtime)) {
                         if (!queue.isEmpty()) {
                             sendNext(queue.pollFirst());
                         }
                         for (int i = 0; i < clients.size(); i++) {
-                            if (clients.get(i).factor.compareTo(new BigInteger("-1")) != 0) {
+                            Client client = clients.get(i);
+                            if (client.factor.compareTo(new BigInteger("-1")) != 0) {
                                 result = clients.get(i).factor;
                                 finished = true;
+                            } else if (client.ready) {
+                                BigInteger next = current.add(len);
+                                sendNext(num + " " + current + " " + next);
+                                current = next;
                             }
                         }
                     }
@@ -88,21 +98,35 @@ public class FactorServer extends Thread {
         } finally {
             listener.close();
         }
+        if (System.nanoTime() >= endtime) {
+            log("The allotted runtime has elapsed. The server has stopped operations.");
+            System.out.println("The allotted time has ended. Server is shutting down.");
+            for (Client client : clients) {
+                client.output.println("QUIT");
+            }
+        }
     }
 
     public static void main(String[] args) throws Exception {
         System.out.println("Max clients?");
+        Scanner scan = new Scanner(System.in);
         try {
-            maxClients = Integer.parseInt((new Scanner(System.in)).nextLine());
+            maxClients = Integer.parseInt(scan.nextLine());
         } catch (Exception e) {
             maxClients = 8;
         }
+        System.out.println("How many hours should this run? (-1 for infinite time): ");
+        try {
+            lifetime = (long) (scan.nextDouble() * 60 * 60 * Math.pow(10, 9));
+        } catch (Exception e) {
+            lifetime = -1;
+        }
         FactorServer server = new FactorServer();
+        System.out.println("Thank you for using FactorServer.");
     }
 
     public void sendNext(String input) {
         while (true) {
-            String job = "GIVE " + nextClient + " " + input;
             if (clients.size() <= 0) {
                 System.out.println("No clients found!");
             }
@@ -120,9 +144,12 @@ public class FactorServer extends Thread {
                 }
             }
             if (nextClient >= clients.size()) nextClient = 0;
-            if (!clients.get(nextClient).dead) {
-                clients.get(nextClient).send(job);
-                log("Sent \"" + job + "\" to client " + nextClient);
+            Client client = clients.get(nextClient);
+            String job = "GIVE " + client.ID + " " + input;
+            if (!client.dead) {
+                client.newNum(job.split(" ")[2]);
+                client.send(job);
+                log("Sent \"" + job + "\" to client " + client.ID);
                 timeLog(job);
                 nextClient = (nextClient + 1) % clients.size();
                 break;
@@ -175,6 +202,7 @@ class Client extends Thread {
     int ID;
     public ArrayList<String> jobs = new ArrayList<>();
     public BigInteger factor = new BigInteger("-1");
+    public boolean ready;
 
     public Client(Socket socket, FactorServer parent, int clientID) {
         this.socket = socket;
@@ -191,11 +219,22 @@ class Client extends Thread {
         }
     }
 
+    public void newNum(String num){
+        BigInteger n=new BigInteger(num);
+        for(int i=0;i<jobs.size();i++){
+            if(new BigInteger(jobs.get(i).split(" ")[2]).compareTo(n)<0){
+                jobs.remove(i);
+                i--;
+            }
+        }
+    }
+
     public void send(String toSend) {
         output.println(toSend);
         jobs.add(toSend.substring(7));
         parent.printTime("START " + toSend.substring(7) + " " + System.nanoTime());
         factor = new BigInteger("-1");
+        ready = false;
     }
 
     public void run() {
@@ -220,6 +259,7 @@ class Client extends Thread {
                     }
                     parent.printTime(result[0] + " " + result[2] + " " + result[3] + " " + result[4] + " " + System.nanoTime());
                 }
+                ready = true;
             } catch (Exception e) {
                 dead = true;
                 System.out.println("Client died!");
@@ -228,40 +268,4 @@ class Client extends Thread {
             }
         }
     }
-}
-
-class Job extends Object {
-    BigInteger num;
-    BigInteger start;
-    BigInteger end;
-    long starttime;
-
-    public Job(BigInteger num, BigInteger start, BigInteger end, long starttime) {
-        this.num = num;
-        this.start = start;
-        this.end = end;
-        this.starttime = starttime;
-    }
-
-    public Job(String jobinfo, long starttime) {
-        this.starttime = starttime;
-        String[] ji = jobinfo.split(" ");
-        num = new BigInteger(ji[2]);
-        start = new BigInteger(ji[3]);
-        end = new BigInteger(ji[4]);
-    }
-
-    public boolean equals(Job j) {
-        if (j.num.compareTo(num) == 0 && j.start.compareTo(start) == 0 && j.end.compareTo(end) == 0) return true;
-        return false;
-    }
-
-    public long timeDiff(Job j) {
-        return j.starttime - starttime;
-    }
-
-    public String toString() {
-        return num + " " + start + " " + end;
-    }
-
 }
