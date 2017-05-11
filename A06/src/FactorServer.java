@@ -25,6 +25,7 @@ public class FactorServer extends Thread {
     public long endtime;
     public long begintime;
     public static long lifetime;
+    public static HashMap<BigInteger, BigInteger> factors = new HashMap<BigInteger, BigInteger>();
 
     public FactorServer() throws Exception {
         logger = new PrintWriter("log.txt");
@@ -61,8 +62,7 @@ public class FactorServer extends Thread {
                 BigInteger len = new BigInteger("30000000");
                 BigInteger current = new BigInteger("0");
                 result = new BigInteger("-1");
-                boolean finished = false;
-                while (!finished && (endtime == -1 || System.nanoTime() < endtime)) {
+                while (!factors.containsKey(num) && (endtime == -1 || System.nanoTime() < endtime)) {
                     while (queue.size() < clients.size() * 8 && current.pow(2).compareTo(num) < 1) {
                         BigInteger next = current.add(len);
                         queue.add(num + " " + current + " " + next);
@@ -76,16 +76,22 @@ public class FactorServer extends Thread {
                             Client client = clients.get(i);
                             if (client.factor.compareTo(new BigInteger("-1")) != 0) {
                                 result = clients.get(i).factor;
-                                finished = true;
+                                if (!factors.containsKey(num)) factors.put(num, result);
                             } else if (client.ready) {
                                 BigInteger next = current.add(len);
                                 sendNext(num + " " + current + " " + next);
                                 current = next;
+                                if (current.pow(2).compareTo(num) > 0) {
+                                    current = BigInteger.ZERO;
+                                }
                             }
                         }
                     }
                     if (result.compareTo(new BigInteger("-1")) != 0) {
-                        finished = true;
+                        if (!factors.containsKey(num)) factors.put(num, result);
+                    }
+                    if (factors.containsKey(num) && factors.get(num).compareTo(new BigInteger("-1")) == 0) {
+                        factors.remove(num);
                     }
                 }
                 for (int i = 0; i < clients.size(); i++) {
@@ -176,7 +182,9 @@ public class FactorServer extends Thread {
     public void printResult(String result) {
         resultWriter.append(result + "\r\n");
         resultWriter.flush();
-        this.result = new BigInteger(result.split(" ")[1]);
+        String[] ra = result.split(" ");
+        this.result = new BigInteger(ra[1]);
+        factors.put(new BigInteger(ra[0]), new BigInteger(ra[1]));
     }
 
     public void printTime(String toPrint) {
@@ -219,10 +227,10 @@ class Client extends Thread {
         }
     }
 
-    public void newNum(String num){
-        BigInteger n=new BigInteger(num);
-        for(int i=0;i<jobs.size();i++){
-            if(new BigInteger(jobs.get(i).split(" ")[2]).compareTo(n)<0){
+    public void newNum(String num) {
+        BigInteger n = new BigInteger(num);
+        for (int i = 0; i < jobs.size(); i++) {
+            if (new BigInteger(jobs.get(i).split(" ")[2]).compareTo(n) < 0) {
                 jobs.remove(i);
                 i--;
             }
