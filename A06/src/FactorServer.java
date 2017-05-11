@@ -75,7 +75,7 @@ public class FactorServer extends Thread {
                         for (int i = 0; i < clients.size(); i++) {
                             Client client = clients.get(i);
                             if (client.factor.compareTo(new BigInteger("-1")) != 0) {
-                                result = clients.get(i).factor;
+                                result = client.factor;
                                 if (!factors.containsKey(num)) factors.put(num, result);
                             } else if (client.ready) {
                                 BigInteger next = current.add(len);
@@ -249,10 +249,8 @@ class Client extends Thread {
                     jobs.remove(result[2] + " " + result[3] + " " + result[4]);
                     if (!result[5].equals("-1")) {
                         factor = new BigInteger(result[5]);
-                        if (factor.pow(2).compareTo(new BigInteger(result[2])) <= 0) {
-                            parent.printResult(result[2] + " " + factor + " " + (new BigInteger(result[2]).divide(factor)));
-                            System.out.println("Factored " + result[2] + ". Found factor " + factor + ".");
-                        }
+                        parent.printResult(result[2] + " " + factor + " " + (new BigInteger(result[2]).divide(factor)));
+                        System.out.println("Factored " + result[2] + ". Found factor " + factor + ".");
                     }
                     parent.printTime(result[0] + " " + result[2] + " " + result[3] + " " + result[4] + " " + System.nanoTime());
                 }
