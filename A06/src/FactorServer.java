@@ -153,7 +153,6 @@ public class FactorServer extends Thread {
             Client client = clients.get(nextClient);
             String job = "GIVE " + client.ID + " " + input;
             if (!client.dead) {
-                client.newNum(job.split(" ")[2]);
                 client.send(job);
                 log("Sent \"" + job + "\" to client " + client.ID);
                 timeLog(job);
@@ -210,7 +209,7 @@ class Client extends Thread {
     int ID;
     public ArrayList<String> jobs = new ArrayList<>();
     public BigInteger factor = new BigInteger("-1");
-    public boolean ready;
+    public boolean ready = false;
 
     public Client(Socket socket, FactorServer parent, int clientID) {
         this.socket = socket;
@@ -224,16 +223,6 @@ class Client extends Thread {
             dead = true;
             parent.remove(this);
             parent.log("Client " + ID + " disconnected.");
-        }
-    }
-
-    public void newNum(String num) {
-        BigInteger n = new BigInteger(num);
-        for (int i = 0; i < jobs.size(); i++) {
-            if (new BigInteger(jobs.get(i).split(" ")[2]).compareTo(n) < 0) {
-                jobs.remove(i);
-                i--;
-            }
         }
     }
 
@@ -254,7 +243,7 @@ class Client extends Thread {
                 //if (in != null) System.out.println(in);
                 if (in.equals("QUIT")) {
                     dead = true;
-                    parent.clients.remove(this);
+                    parent.remove(this);
                 } else if (in.startsWith("FINISH")) {
                     String[] result = in.split(" ");
                     jobs.remove(result[2] + " " + result[3] + " " + result[4]);
