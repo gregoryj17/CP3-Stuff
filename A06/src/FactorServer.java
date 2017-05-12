@@ -25,7 +25,12 @@ public class FactorServer extends Thread {
     public long endtime;
     public long begintime;
     public static long lifetime;
+    public long halftime;
+    public boolean hto = false;
+    public boolean htc = false;
     public static HashMap<BigInteger, BigInteger> factors = new HashMap<BigInteger, BigInteger>();
+    LinkedList<String> deadqueue = new LinkedList<>();
+    ArrayList<BigInteger> completed = new ArrayList<>();
 
     public FactorServer() throws Exception {
         logger = new PrintWriter("log.txt");
@@ -38,6 +43,9 @@ public class FactorServer extends Thread {
         System.out.println("Factor Server is Running");
         log("Server started.");
         Scanner scan = new Scanner(System.in);
+        if (lifetime >= 7200 * Math.pow(10, 9)) {
+            htc = true;
+        }
         try {
             while (clients.size() < maxClients) {
                 Client client = new Client(listener.accept(), this, clientID++);
@@ -50,7 +58,13 @@ public class FactorServer extends Thread {
             }
             begintime = System.nanoTime();
             endtime = (lifetime != -1) ? (begintime + lifetime) : -1;
+            halftime = (lifetime != -1) ? (begintime + (lifetime / 2)) : -1;
             while (numIn.hasNext() && (endtime == -1 || System.nanoTime() < endtime)) {
+                if (htc && halftime != -1 && System.nanoTime() > halftime && !hto) {
+                    hto = true;
+                    numIn = new Scanner(new File("jackson.txt"));
+                    htc = false;
+                }
                 String nextline = numIn.nextLine();
                 BigInteger num;
                 if (nextline.equals("")) break;
@@ -62,15 +76,18 @@ public class FactorServer extends Thread {
                 BigInteger len = new BigInteger("30000000");
                 BigInteger current = new BigInteger("0");
                 result = new BigInteger("-1");
-                while (!factors.containsKey(num) && (endtime == -1 || System.nanoTime() < endtime)) {
+                while ((!completed.contains(num)) && (endtime == -1 || System.nanoTime() < endtime)) {
                     while (queue.size() < clients.size() * 8 && current.pow(2).compareTo(num) < 1) {
                         BigInteger next = current.add(len);
                         queue.add(num + " " + current + " " + next);
                         current = next;
                     }
-                    while (result.compareTo(new BigInteger("-1")) == 0 && (endtime == -1 || System.nanoTime() < endtime)) {
+                    while (!completed.contains(num) && (endtime == -1 || System.nanoTime() < endtime)) {
                         if (!queue.isEmpty()) {
                             sendNext(queue.pollFirst());
+                        }
+                        if (!deadqueue.isEmpty()) {
+                            sendNext(deadqueue.pollFirst());
                         }
                         for (int i = 0; i < clients.size(); i++) {
                             Client client = clients.get(i);
@@ -81,9 +98,6 @@ public class FactorServer extends Thread {
                                 BigInteger next = current.add(len);
                                 sendNext(num + " " + current + " " + next);
                                 current = next;
-                                if (current.pow(2).compareTo(num) > 0) {
-                                    current = BigInteger.ZERO;
-                                }
                             }
                         }
                     }
@@ -184,6 +198,7 @@ public class FactorServer extends Thread {
         String[] ra = result.split(" ");
         this.result = new BigInteger(ra[1]);
         factors.put(new BigInteger(ra[0]), new BigInteger(ra[1]));
+        completed.add(new BigInteger(ra[0]));
     }
 
     public void printTime(String toPrint) {
@@ -193,9 +208,7 @@ public class FactorServer extends Thread {
 
     public void remove(Client client) {
         clients.remove(client);
-        for (String job : client.jobs) {
-            queue.add(job);
-        }
+        deadqueue.addAll(client.jobs);
     }
 
 }
