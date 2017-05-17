@@ -25,9 +25,6 @@ public class FactorServer extends Thread {
     public long endtime;
     public long begintime;
     public static long lifetime;
-    public long halftime;
-    public boolean hto = false;
-    public boolean htc = false;
     public static HashMap<BigInteger, BigInteger> factors = new HashMap<BigInteger, BigInteger>();
     LinkedList<String> deadqueue = new LinkedList<>();
     ArrayList<BigInteger> completed = new ArrayList<>();
@@ -43,9 +40,6 @@ public class FactorServer extends Thread {
         System.out.println("Factor Server is Running");
         log("Server started.");
         Scanner scan = new Scanner(System.in);
-        if (lifetime >= 7200 * Math.pow(10, 9)) {
-            htc = true;
-        }
         try {
             while (clients.size() < maxClients) {
                 Client client = new Client(listener.accept(), this, clientID++);
@@ -58,13 +52,7 @@ public class FactorServer extends Thread {
             }
             begintime = System.nanoTime();
             endtime = (lifetime != -1) ? (begintime + lifetime) : -1;
-            halftime = (lifetime != -1) ? (begintime + (lifetime / 2)) : -1;
             while (numIn.hasNext() && (endtime == -1 || System.nanoTime() < endtime)) {
-                if (htc && halftime != -1 && System.nanoTime() > halftime && !hto) {
-                    hto = true;
-                    numIn = new Scanner(new File("jackson.txt"));
-                    htc = false;
-                }
                 String nextline = numIn.nextLine();
                 BigInteger num;
                 if (nextline.equals("")) break;
